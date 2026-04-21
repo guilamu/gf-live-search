@@ -28,6 +28,14 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: gf-live-search.php
+msgid "More information about GF Live Search"
+msgstr ""
+
+#: gf-live-search.php
+msgid "View details"
+msgstr ""
+
+#: gf-live-search.php
 msgid "🐛 Report a Bug"
 msgstr ""
 

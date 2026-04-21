@@ -116,6 +116,17 @@ add_filter( 'plugin_row_meta', function ( array $links, string $file ): array {
         return $links;
     }
 
+    // "View details" thickbox link — same pattern as WordPress.org-hosted plugins.
+    $links[] = sprintf(
+        '<a href="%s" class="thickbox open-plugin-details-modal" aria-label="%s" data-title="%s">%s</a>',
+        esc_url( self_admin_url(
+            'plugin-install.php?tab=plugin-information&plugin=gf-live-search&TB_iframe=true&width=772&height=926'
+        ) ),
+        esc_attr__( 'More information about GF Live Search', 'gf-live-search' ),
+        esc_attr__( 'GF Live Search', 'gf-live-search' ),
+        esc_html__( 'View details', 'gf-live-search' )
+    );
+
     if ( class_exists( 'Guilamu_Bug_Reporter' ) ) {
         $links[] = sprintf(
             '<a href="#" class="guilamu-bug-report-btn" data-plugin-slug="gf-live-search" data-plugin-name="%s">%s</a>',

@@ -30,6 +30,7 @@ class GF_Live_Search_GitHub_Updater {
     private const REQUIRES_WP        = '5.8';
     private const TESTED_WP          = '6.7';
     private const REQUIRES_PHP       = '7.4';
+    private const REQUIRES_GF        = '2.8';
     private const TEXT_DOMAIN        = 'gf-live-search';
     private const CACHE_KEY          = 'gf_live_search_github_release';
     private const CACHE_EXPIRATION   = 43200; // 12 hours
@@ -311,6 +312,22 @@ class GF_Live_Search_GitHub_Updater {
             . 'document.addEventListener("DOMContentLoaded",function(){'
             . 'var title=document.getElementById("plugin-information-title");'
             . 'if(title){title.classList.add("with-banner");}'
+            . '});'
+            . '</script>';
+
+        // Gravity Forms add-on: inject "Requires Gravity Forms" sidebar line.
+        // The WordPress sidebar is hardcoded — no PHP hook exists to add items,
+        // so a JS snippet inserts the line after "Requires PHP Version".
+        $gf_version = esc_html( self::REQUIRES_GF );
+        echo '<script>'
+            . 'document.addEventListener("DOMContentLoaded",function(){'
+            . 'var items=document.querySelectorAll(".fyi ul li");'
+            . 'var php=null;'
+            . 'for(var i=0;i<items.length;i++){if(items[i].textContent.indexOf("Requires PHP")!==-1){php=items[i];break;}}'
+            . 'if(!php)return;'
+            . 'var li=document.createElement("li");'
+            . 'li.innerHTML="<strong>Requires Gravity Forms:<\/strong> ' . $gf_version . ' or higher";'
+            . 'php.parentNode.insertBefore(li,php.nextSibling);'
             . '});'
             . '</script>';
     }
