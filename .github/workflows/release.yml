@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create plugin zip
+        run: |
+          mkdir -p build/gf-live-search
+
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='build' \
+            --exclude='.gitignore' \
+            --exclude='*.md' \
+            --exclude='composer.*' \
+            --exclude='package*.json' \
+            --exclude='node_modules' \
+            --exclude='.DS_Store' \
+            --exclude='screenshot*.*' \
+            --exclude='WordPress-*.md' \
+            ./ build/gf-live-search/
+
+          # Keep README.md in the zip for end users
+          cp README.md build/gf-live-search/
+
+          cd build
+          zip -r ../gf-live-search.zip gf-live-search
+          cd ..
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: gf-live-search.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
