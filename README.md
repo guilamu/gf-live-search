@@ -1,6 +1,6 @@
 # GF Live Search
 
-Instant live filtering for the Gravity Forms forms list.
+Adds live filtering to the Gravity Forms forms list. As you type in the search box, forms are instantly filtered without a page reload.
 
 ## Live Search
 
