@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: GF Live Search 1.0.0\n"
-"Report-Msgid-Bugs-To: https://retry.fr\n"
+"Report-Msgid-Bugs-To: https://github.com/guilamu/gf-live-search/issues\n"
 "POT-Creation-Date: 2026-04-21 00:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"

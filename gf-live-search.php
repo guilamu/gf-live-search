@@ -6,10 +6,10 @@
  * Version:           1.0.1
  * Requires at least: 5.8
  * Requires PHP:      7.4
- * Author:            retry.fr
- * Author URI:        https://retry.fr
- * License:           GPL-2.0-or-later
- * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Author:            Guilamu
+ * Author URI:        https://github.com/guilamu
+ * License:           AGPL-3.0-or-later
+ * License URI:       https://www.gnu.org/licenses/agpl-3.0.html
  * Text Domain:       gf-live-search
  * Domain Path:       /languages
  * Update URI:        https://github.com/guilamu/gf-live-search/
