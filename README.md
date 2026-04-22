@@ -24,7 +24,7 @@ Focus the search box from anywhere on the page without touching the mouse.
 ## Key Features
 
 - **Multilingual:** Works with form names in any language
-- **Translation-Ready:** All UI strings are internationalized and loaded via `wp_set_script_translations`
+- **Translation-Ready:** PHP strings use the plugin textdomain, and JS strings have a PHP-powered fallback when script-translation JSON files are not present
 - **Secure:** Assets load only on the Gravity Forms forms list screen; all query vars are sanitized before use
 - **GitHub Updates:** Automatic updates delivered through the standard WordPress update interface
 
@@ -72,11 +72,15 @@ Yes. Place a compiled `.po`/`.mo` pair and the corresponding JSON file for scrip
 
 ## Changelog
 
-### 1.0.1
+### 1.0.2 - 2026-04-22
+- Load the plugin textdomain explicitly
+- Fix French JS translations when script-translation JSON files are not generated
+
+### 1.0.1 - 2026-04-22
 - Search across all paginated forms in the current view
 - Fix the empty-state row width/background on the Gravity Forms list table
 
-### 1.0.0
+### 1.0.0 - 2026-04-21
 - Initial release
 
 ## License

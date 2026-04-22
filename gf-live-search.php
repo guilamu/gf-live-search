@@ -3,7 +3,7 @@
  * Plugin Name:       GF Live Search
  * Plugin URI:        https://github.com/guilamu/gf-live-search
  * Description:       Adds live filtering to the Gravity Forms forms list. As you type in the search box, forms are instantly filtered without a page reload.
- * Version:           1.0.1
+ * Version:           1.0.2
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Guilamu
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'GF_LIVE_SEARCH_VERSION', '1.0.1' );
+define( 'GF_LIVE_SEARCH_VERSION', '1.0.2' );
 define( 'GF_LIVE_SEARCH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'GF_LIVE_SEARCH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -41,7 +41,19 @@ class GF_Live_Search {
     }
 
     private function __construct() {
+        add_action( 'plugins_loaded', [ $this, 'load_textdomain' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+    }
+
+    /**
+     * Load translations from the plugin languages directory.
+     */
+    public function load_textdomain(): void {
+        load_plugin_textdomain(
+            'gf-live-search',
+            false,
+            dirname( plugin_basename( __FILE__ ) ) . '/languages'
+        );
     }
 
     /**
@@ -79,6 +91,12 @@ class GF_Live_Search {
             true
         );
 
+        wp_add_inline_script(
+            'gf-live-search',
+            'window.gfLiveSearchI18n = ' . wp_json_encode( $this->get_script_translations() ) . ';',
+            'before'
+        );
+
         if ( function_exists( 'wp_set_script_translations' ) ) {
             wp_set_script_translations( 'gf-live-search', 'gf-live-search', GF_LIVE_SEARCH_PLUGIN_DIR . 'languages' );
         }
@@ -89,6 +107,26 @@ class GF_Live_Search {
             [],
             GF_LIVE_SEARCH_VERSION
         );
+    }
+
+    /**
+     * Get translated strings used by the admin script.
+     *
+     * @return array<string, mixed>
+     */
+    private function get_script_translations(): array {
+        return [
+            'strings' => [
+                'No forms match your search.' => __( 'No forms match your search.', 'gf-live-search' ),
+                'Ctrl/Cmd+F to focus'        => __( 'Ctrl/Cmd+F to focus', 'gf-live-search' ),
+            ],
+            'plurals' => [
+                '%d form' => [
+                    _n( '%d form', '%d forms', 1, 'gf-live-search' ),
+                    _n( '%d form', '%d forms', 2, 'gf-live-search' ),
+                ],
+            ],
+        ];
     }
 }
 

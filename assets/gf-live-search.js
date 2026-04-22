@@ -13,12 +13,34 @@
 ( function () {
     'use strict';
 
-    var __ = ( window.wp && window.wp.i18n && window.wp.i18n.__ ) || function ( text ) {
+    var i18nData = window.gfLiveSearchI18n || {};
+    var hasOwn = Object.prototype.hasOwnProperty;
+    var wpI18n = window.wp && window.wp.i18n ? window.wp.i18n : null;
+
+    function __( text, domain ) {
+        if ( i18nData.strings && hasOwn.call( i18nData.strings, text ) ) {
+            return i18nData.strings[ text ];
+        }
+
+        if ( wpI18n && wpI18n.__ ) {
+            return wpI18n.__( text, domain );
+        }
+
         return text;
-    };
-    var _n = ( window.wp && window.wp.i18n && window.wp.i18n._n ) || function ( singular, plural, number ) {
+    }
+
+    function _n( singular, plural, number, domain ) {
+        if ( i18nData.plurals && hasOwn.call( i18nData.plurals, singular ) ) {
+            return number === 1 ? i18nData.plurals[ singular ][ 0 ] : i18nData.plurals[ singular ][ 1 ];
+        }
+
+        if ( wpI18n && wpI18n._n ) {
+            return wpI18n._n( singular, plural, number, domain );
+        }
+
         return number === 1 ? singular : plural;
-    };
+    }
+
     var sprintf = ( window.wp && window.wp.i18n && window.wp.i18n.sprintf ) || function ( format, value ) {
         return format.replace( '%d', value );
     };
