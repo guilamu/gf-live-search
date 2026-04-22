@@ -12,7 +12,7 @@
     text-align: center;
     color: #6c7176; /* WP admin muted text */
     font-size: 14px;
-    background: transparent;
+    background: #fff;
     border-bottom: none;
 }
 
@@ -62,5 +62,9 @@
 /* Hide the hint when the input already has focus or content */
 #form_list_search:focus-within .gf-live-search-shortcut-hint,
 #form_list_search.gf-live-search-has-value .gf-live-search-shortcut-hint {
+    display: none;
+}
+
+#form_list_search.gf-live-search-has-value .tablenav-pages .pagination-links {
     display: none;
 }

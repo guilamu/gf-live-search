@@ -52,6 +52,142 @@
             .replace( /[\u0300-\u036f]/g, '' );
     }
 
+    /**
+     * Convert array-like collections into real arrays.
+     *
+     * @param {*} list
+     * @returns {Array}
+     */
+    function toArray( list ) {
+        return Array.prototype.slice.call( list || [] );
+    }
+
+    /**
+     * Count all header cells, including the checkbox column rendered as a td.
+     *
+     * @param {HTMLTableElement} tableElement
+     * @returns {number}
+     */
+    function getColumnCount( tableElement ) {
+        var headerRow = tableElement && tableElement.tHead && tableElement.tHead.rows.length
+            ? tableElement.tHead.rows[ 0 ]
+            : null;
+
+        if ( ! headerRow ) {
+            return 1;
+        }
+
+        return toArray( headerRow.children ).reduce( function ( total, cell ) {
+            var span = parseInt( cell.getAttribute( 'colspan' ) || '1', 10 );
+
+            return total + ( isNaN( span ) ? 1 : span );
+        }, 0 ) || 1;
+    }
+
+    /**
+     * Get the table rows that represent forms.
+     *
+     * @param {HTMLElement} container
+     * @returns {Array<HTMLTableRowElement>}
+     */
+    function getFormRows( container ) {
+        return toArray( container && container.children ).filter( function ( row ) {
+            return row && row.tagName === 'TR' && row.id !== 'gf-live-search-no-results';
+        } );
+    }
+
+    /**
+     * Remove text that should not influence live-search matching.
+     *
+     * @param {HTMLElement} root
+     * @param {string} selector
+     */
+    function removeMatches( root, selector ) {
+        toArray( root.querySelectorAll( selector ) ).forEach( function ( element ) {
+            element.parentNode.removeChild( element );
+        } );
+    }
+
+    /**
+     * Build the searchable text for a single row.
+     *
+     * @param {HTMLTableRowElement} row
+     * @returns {string}
+     */
+    function getRowSearchText( row ) {
+        var clone = row.cloneNode( true );
+
+        removeMatches( clone, '.row-actions, .screen-reader-text, .toggle-row' );
+
+        return normalize( clone.textContent || '' );
+    }
+
+    /**
+     * Cache searchable metadata on a row.
+     *
+     * @param {HTMLTableRowElement} row
+     * @returns {HTMLTableRowElement}
+     */
+    function primeRow( row ) {
+        row.dataset.gflsSearchText = getRowSearchText( row );
+        return row;
+    }
+
+    /**
+     * Read the current paged view from the list table controls.
+     *
+     * @returns {number}
+     */
+    function getCurrentPageNumber() {
+        var pageInput = document.querySelector( '.tablenav-pages .current-page' );
+        var page = pageInput ? parseInt( pageInput.value, 10 ) : NaN;
+
+        if ( ! isNaN( page ) && page > 0 ) {
+            return page;
+        }
+
+        try {
+            page = parseInt( new URL( window.location.href ).searchParams.get( 'paged' ) || '1', 10 );
+        } catch ( error ) {
+            page = 1;
+        }
+
+        return ! isNaN( page ) && page > 0 ? page : 1;
+    }
+
+    /**
+     * Read the total number of paginated pages from the current screen.
+     *
+     * @returns {number}
+     */
+    function getTotalPages() {
+        var total = 1;
+
+        toArray( document.querySelectorAll( '.tablenav-pages .total-pages' ) ).forEach( function ( element ) {
+            var value = parseInt( ( element.textContent || '' ).trim(), 10 );
+
+            if ( ! isNaN( value ) && value > total ) {
+                total = value;
+            }
+        } );
+
+        return total;
+    }
+
+    /**
+     * Build the URL for another paginated view of the same forms list.
+     *
+     * @param {number} pageNumber
+     * @returns {string}
+     */
+    function getPageUrl( pageNumber ) {
+        var url = new URL( window.location.href );
+
+        url.searchParams.set( 'paged', String( pageNumber ) );
+
+        return url.toString();
+    }
+
     document.addEventListener( 'DOMContentLoaded', function () {
 
         // ── Target elements ──────────────────────────────────────────────────
@@ -86,6 +222,11 @@
         }
 
         var table = tbody.closest( 'table' );
+        var currentPage = getCurrentPageNumber();
+        var totalPages = getTotalPages();
+        var currentRows = getFormRows( tbody ).map( primeRow );
+        var remoteRows = [];
+        var preloadPromise = null;
 
         // ── No-results placeholder ────────────────────────────────────────────
 
@@ -95,9 +236,8 @@
         var noResultsCell = document.createElement( 'td' );
         var noResultsIcon = document.createElement( 'span' );
         var noResultsText = document.createElement( 'span' );
-        var headerCells = table ? table.querySelectorAll( 'thead th' ) : [];
 
-        noResultsCell.colSpan = headerCells.length || 1;
+        noResultsCell.colSpan = table ? getColumnCount( table ) : 1;
         noResultsCell.className = 'gf-live-search-empty';
 
         noResultsIcon.className = 'gf-live-search-empty-icon';
@@ -109,7 +249,7 @@
         noResultsCell.appendChild( noResultsIcon );
         noResultsCell.appendChild( noResultsText );
         noResults.appendChild( noResultsCell );
-        noResults.style.display = 'none';
+        noResults.hidden = true;
         tbody.appendChild( noResults );
 
         if ( searchBox ) {
@@ -128,32 +268,106 @@
         }
 
         /**
+         * Start loading the remaining paginated form rows in the background.
+         *
+         * @returns {Promise<Array<HTMLTableRowElement>>}
+         */
+        function preloadOtherPages() {
+            var pageNumbers = [];
+
+            if ( preloadPromise ) {
+                return preloadPromise;
+            }
+
+            if ( totalPages <= 1 || ! window.fetch || ! window.DOMParser || ! window.URL ) {
+                preloadPromise = Promise.resolve( remoteRows );
+                return preloadPromise;
+            }
+
+            for ( var pageNumber = 1; pageNumber <= totalPages; pageNumber++ ) {
+                if ( pageNumber !== currentPage ) {
+                    pageNumbers.push( pageNumber );
+                }
+            }
+
+            preloadPromise = Promise.all( pageNumbers.map( function ( pageNumber ) {
+                return fetch( getPageUrl( pageNumber ), {
+                    credentials: 'same-origin',
+                } )
+                    .then( function ( response ) {
+                        if ( ! response.ok ) {
+                            throw new Error( 'Failed to load additional forms-list pages.' );
+                        }
+
+                        return response.text();
+                    } )
+                    .then( function ( html ) {
+                        var parser = new DOMParser();
+                        var page = parser.parseFromString( html, 'text/html' );
+                        var pageTbody = page.getElementById( 'the-list' );
+
+                        if ( ! pageTbody ) {
+                            return [];
+                        }
+
+                        return getFormRows( pageTbody ).map( function ( row ) {
+                            var importedRow = document.importNode( row, true );
+
+                            importedRow.hidden = true;
+
+                            return primeRow( importedRow );
+                        } );
+                    } );
+            } ) )
+                .then( function ( rowGroups ) {
+                    rowGroups.forEach( function ( rows ) {
+                        rows.forEach( function ( row ) {
+                            remoteRows.push( row );
+                            tbody.insertBefore( row, noResults );
+                        } );
+                    } );
+
+                    if ( input.value.trim() !== '' ) {
+                        filterForms();
+                    }
+
+                    return remoteRows;
+                } )
+                .catch( function () {
+                    return remoteRows;
+                } );
+
+            return preloadPromise;
+        }
+
+        /**
          * Filter table rows based on the current input value.
          * Searches across: form title, form ID, entry count.
          */
         function filterForms() {
             var query = normalize( input.value.trim() );
-
-            // Cache all data rows (exclude our own no-results row)
-            var rows = Array.prototype.slice.call( tbody.querySelectorAll( 'tr:not(#gf-live-search-no-results)' ) );
+            var rows = currentRows.concat( remoteRows );
 
             var visibleCount = 0;
 
-            rows.forEach( function ( row ) {
-                if ( ! query ) {
+            if ( ! query ) {
+                currentRows.forEach( function ( row ) {
                     row.hidden = false;
-                    visibleCount++;
-                    return;
-                }
+                } );
 
-                // Clone the row and strip hidden row-action links before reading text.
-                // GF injects action links (Edit | Settings | … | Export) into every row;
-                // they are invisible but present in textContent, causing false positives.
-                var clone = row.cloneNode( true );
-                var actions = clone.querySelectorAll( '.row-actions' );
-                actions.forEach( function ( el ) { el.parentNode.removeChild( el ); } );
+                remoteRows.forEach( function ( row ) {
+                    row.hidden = true;
+                } );
 
-                var haystack = normalize( clone.textContent || '' );
+                noResults.hidden = true;
+                updateCountBadge( visibleCount, query );
+                syncInputState();
+
+                return;
+            }
+
+            rows.forEach( function ( row ) {
+                var haystack = row.dataset.gflsSearchText || '';
 
                 var matches = haystack.indexOf( query ) !== -1;
                 row.hidden = ! matches;
@@ -161,7 +375,7 @@
             } );
 
             // Toggle the no-results row
-            noResults.style.display = ( query && visibleCount === 0 ) ? '' : 'none';
+            noResults.hidden = visibleCount !== 0;
 
             // Update the visual counter badge (GF shows "X items" above the table)
             updateCountBadge( visibleCount, query );
@@ -224,6 +438,7 @@
         input.addEventListener( 'change', filterForms );
 
         syncInputState();
+        preloadOtherPages();
 
         // Instantly filter when the page loads with a pre-filled value
         // (e.g. the user refreshed with ?s=foo in the URL)
