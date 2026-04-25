@@ -2,6 +2,9 @@
 
 Instant live filtering for the Gravity Forms forms list.
 
+<img width="610" height="273" alt="{1F5ECAF2-0E85-4C94-8701-FF81A74E198C}" src="https://github.com/user-attachments/assets/40b11304-b34a-4f5d-9927-4785498de237" />
+
+
 ## Live Search
 
 As you type in the search box on **Forms → Forms**, rows are instantly shown or hidden.
