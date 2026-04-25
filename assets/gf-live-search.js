@@ -16,6 +16,7 @@
     var i18nData = window.gfLiveSearchI18n || {};
     var hasOwn = Object.prototype.hasOwnProperty;
     var wpI18n = window.wp && window.wp.i18n ? window.wp.i18n : null;
+    var shortcutStorageKey = 'gfLiveSearchShortcutMode';
 
     function __( text, domain ) {
         if ( i18nData.strings && hasOwn.call( i18nData.strings, text ) ) {
@@ -210,6 +211,47 @@
         return url.toString();
     }
 
+    function getShortcutMode() {
+        try {
+            var savedMode = window.localStorage ? window.localStorage.getItem( shortcutStorageKey ) : '';
+
+            if ( savedMode === 'browser' || savedMode === 'search' ) {
+                return savedMode;
+            }
+        } catch ( error ) {
+            return 'browser';
+        }
+
+        return 'browser';
+    }
+
+    function persistShortcutMode( mode ) {
+        try {
+            if ( window.localStorage ) {
+                window.localStorage.setItem( shortcutStorageKey, mode );
+            }
+        } catch ( error ) {
+            return;
+        }
+    }
+
+    function getShortcutBadgeLabel() {
+        var platform = '';
+
+        try {
+            if ( window.navigator ) {
+                platform =
+                    ( window.navigator.userAgentData && window.navigator.userAgentData.platform ) ||
+                    window.navigator.platform ||
+                    '';
+            }
+        } catch ( error ) {
+            platform = '';
+        }
+
+        return String( platform ).toLowerCase().indexOf( 'mac' ) !== -1 ? '\u2318F' : 'Ctrl+F';
+    }
+
     document.addEventListener( 'DOMContentLoaded', function () {
 
         // ── Target elements ──────────────────────────────────────────────────
@@ -249,6 +291,11 @@
         var currentRows = getFormRows( tbody ).map( primeRow );
         var remoteRows = [];
         var preloadPromise = null;
+        var shortcutMode = getShortcutMode();
+        var shortcutBadge = null;
+        var shortcutPopover = null;
+        var browserOption = null;
+        var searchOption = null;
 
         // ── No-results placeholder ────────────────────────────────────────────
 
@@ -274,14 +321,127 @@
         noResults.hidden = true;
         tbody.appendChild( noResults );
 
-        if ( searchBox ) {
-            var shortcutHint = document.createElement( 'span' );
+        function setShortcutPopoverState( isOpen ) {
+            if ( ! shortcutPopover || ! shortcutBadge ) {
+                return;
+            }
 
-            shortcutHint.className = 'gf-live-search-shortcut-hint';
-            shortcutHint.setAttribute( 'aria-hidden', 'true' );
-            shortcutHint.textContent = __( 'Ctrl/Cmd+F to focus', 'gf-live-search' );
-            inputWrap.appendChild( shortcutHint );
+            shortcutPopover.hidden = ! isOpen;
+            shortcutBadge.setAttribute( 'aria-expanded', isOpen ? 'true' : 'false' );
         }
+
+        function syncShortcutUi() {
+            inputWrap.dataset.gflsShortcutMode = shortcutMode;
+
+            if ( browserOption ) {
+                browserOption.setAttribute( 'aria-pressed', shortcutMode === 'browser' ? 'true' : 'false' );
+            }
+
+            if ( searchOption ) {
+                searchOption.setAttribute( 'aria-pressed', shortcutMode === 'search' ? 'true' : 'false' );
+            }
+        }
+
+        function setShortcutMode( nextMode ) {
+            if ( nextMode !== 'browser' && nextMode !== 'search' ) {
+                return;
+            }
+
+            shortcutMode = nextMode;
+            persistShortcutMode( nextMode );
+            syncShortcutUi();
+        }
+
+        if ( searchBox ) {
+            var shortcutBadgeLabel = document.createElement( 'span' );
+            var shortcutTitle = document.createElement( 'p' );
+
+            shortcutBadge = document.createElement( 'button' );
+            shortcutPopover = document.createElement( 'div' );
+            browserOption = document.createElement( 'button' );
+            searchOption = document.createElement( 'button' );
+
+            shortcutBadge.type = 'button';
+            shortcutBadge.className = 'gf-live-search-shortcut-badge';
+            shortcutBadge.setAttribute( 'aria-controls', 'gf-live-search-shortcut-popover' );
+            shortcutBadge.setAttribute( 'aria-expanded', 'false' );
+            shortcutBadge.setAttribute( 'aria-haspopup', 'true' );
+            shortcutBadge.setAttribute( 'aria-label', __( 'Choose what Ctrl/Cmd+F does', 'gf-live-search' ) );
+
+            shortcutBadgeLabel.className = 'gf-live-search-shortcut-badge-label';
+            shortcutBadgeLabel.setAttribute( 'aria-hidden', 'true' );
+            shortcutBadgeLabel.textContent = getShortcutBadgeLabel();
+            shortcutBadge.appendChild( shortcutBadgeLabel );
+
+            shortcutPopover.id = 'gf-live-search-shortcut-popover';
+            shortcutPopover.className = 'gf-live-search-shortcut-popover';
+            shortcutPopover.hidden = true;
+
+            shortcutTitle.className = 'gf-live-search-shortcut-title';
+            shortcutTitle.textContent = __( 'Ctrl/Cmd+F', 'gf-live-search' );
+            shortcutPopover.appendChild( shortcutTitle );
+
+            browserOption.type = 'button';
+            browserOption.className = 'gf-live-search-shortcut-option';
+            browserOption.dataset.gflsShortcutMode = 'browser';
+            browserOption.textContent = __( 'Use browser find', 'gf-live-search' );
+            shortcutPopover.appendChild( browserOption );
+
+            searchOption.type = 'button';
+            searchOption.className = 'gf-live-search-shortcut-option';
+            searchOption.dataset.gflsShortcutMode = 'search';
+            searchOption.textContent = __( 'Focus this search', 'gf-live-search' );
+            shortcutPopover.appendChild( searchOption );
+
+            inputWrap.appendChild( shortcutBadge );
+            inputWrap.appendChild( shortcutPopover );
+            syncShortcutUi();
+
+            shortcutBadge.addEventListener( 'click', function ( e ) {
+                e.preventDefault();
+                setShortcutPopoverState( shortcutPopover.hidden );
+
+                if ( ! shortcutPopover.hidden ) {
+                    ( shortcutMode === 'search' ? searchOption : browserOption ).focus();
+                }
+            } );
+
+            browserOption.addEventListener( 'click', function () {
+                setShortcutMode( 'browser' );
+                setShortcutPopoverState( false );
+                shortcutBadge.focus();
+            } );
+
+            searchOption.addEventListener( 'click', function () {
+                setShortcutMode( 'search' );
+                setShortcutPopoverState( false );
+                focusSearchInput();
+            } );
+        }
+
+        document.addEventListener( 'click', function ( e ) {
+            if ( ! shortcutPopover || shortcutPopover.hidden ) {
+                return;
+            }
+
+            if ( inputWrap.contains( e.target ) ) {
+                return;
+            }
+
+            setShortcutPopoverState( false );
+        } );
+
+        document.addEventListener( 'focusin', function ( e ) {
+            if ( ! shortcutPopover || shortcutPopover.hidden ) {
+                return;
+            }
+
+            if ( inputWrap.contains( e.target ) ) {
+                return;
+            }
+
+            setShortcutPopoverState( false );
+        } );
 
         // ── Live filter logic ─────────────────────────────────────────────────
 
@@ -468,7 +628,7 @@
             filterForms();
         }
 
-        // ── Keyboard shortcuts: "/" and Ctrl/Cmd+F focus the search box ──────
+        // ── Keyboard shortcuts: "/" always focuses search, Ctrl/Cmd+F is user-selectable ──
 
         function focusSearchInput() {
             input.focus();
@@ -476,6 +636,13 @@
         }
 
         document.addEventListener( 'keydown', function ( e ) {
+            if ( e.key === 'Escape' && shortcutPopover && ! shortcutPopover.hidden ) {
+                e.preventDefault();
+                setShortcutPopoverState( false );
+                shortcutBadge.focus();
+                return;
+            }
+
             var tag = ( document.activeElement && document.activeElement.tagName ) || '';
             var activeElement = document.activeElement;
             var inEditable = (
@@ -484,9 +651,10 @@
                 tag === 'SELECT' ||
                 ( activeElement && activeElement.isContentEditable )
             );
+            var inShortcutUi = activeElement && inputWrap.contains( activeElement ) && activeElement !== input;
             var wantsFind = ( e.key && e.key.toLowerCase() === 'f' && ( e.ctrlKey || e.metaKey ) && ! e.altKey );
 
-            if ( inEditable ) { return; }
+            if ( inEditable || inShortcutUi ) { return; }
 
             // "/" key (common in list-heavy UIs like GitHub, Linear)
             if ( e.key === '/' ) {
@@ -495,7 +663,7 @@
                 return;
             }
 
-            if ( wantsFind ) {
+            if ( wantsFind && shortcutMode === 'search' ) {
                 e.preventDefault();
                 focusSearchInput();
             }

@@ -18,7 +18,7 @@ As you type in the search box on **Forms → Forms**, rows are instantly shown o
 Focus the search box from anywhere on the page without touching the mouse.
 
 - **`/`** — press once to jump to the search box instantly
-- **`Ctrl/Cmd+F`** — intercepts the browser find shortcut and redirects it to the search box
+- **`Ctrl/Cmd+F` badge** — a compact badge inside the search field lets each user choose between browser find and focusing the live-search box
 - **Live counter** — the "X items" badge updates to reflect how many forms are visible
 
 ## Key Features
@@ -71,6 +71,11 @@ Yes. Place a compiled `.po`/`.mo` pair and the corresponding JSON file for scrip
 ```
 
 ## Changelog
+
+### 1.0.3 - 2026-04-25
+- Add an inline shortcut badge with a popover to control what `Ctrl/Cmd+F` does
+- Default `Ctrl/Cmd+F` to the browser find action unless a user opts into focusing the search box
+- Replace the PHP 8-only `str_ends_with()` updater check with a PHP 7.4-safe suffix check
 
 ### 1.0.2 - 2026-04-22
 - Load the plugin textdomain explicitly

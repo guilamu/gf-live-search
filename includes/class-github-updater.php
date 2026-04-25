@@ -114,7 +114,7 @@ class GF_Live_Search_GitHub_Updater {
             foreach ( $release_data['assets'] as $asset ) {
                 if (
                     isset( $asset['browser_download_url'], $asset['name'] ) &&
-                    str_ends_with( $asset['name'], '.zip' )
+                    substr( $asset['name'], -4 ) === '.zip'
                 ) {
                     return $asset['browser_download_url'];
                 }

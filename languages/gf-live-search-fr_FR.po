@@ -1,9 +1,9 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: GF Live Search 1.0.0\n"
+"Project-Id-Version: GF Live Search 1.0.3\n"
 "Report-Msgid-Bugs-To: https://github.com/guilamu/gf-live-search/issues\n"
-"POT-Creation-Date: 2026-04-21 00:00+0000\n"
-"PO-Revision-Date: 2026-04-22 17:41+0200\n"
+"POT-Creation-Date: 2026-04-25 00:00+0000\n"
+"PO-Revision-Date: 2026-04-25 17:34+0200\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Language: fr_FR\n"
@@ -14,33 +14,45 @@ msgstr ""
 "X-Domain: gf-live-search\n"
 "X-Generator: Poedit 3.9\n"
 
-#: assets/gf-live-search.js:101
+#: assets/gf-live-search.js:316
 msgid "No forms match your search."
 msgstr "Aucun formulaire ne correspond à votre recherche."
 
-#: assets/gf-live-search.js:114
-msgid "Ctrl/Cmd+F to focus"
-msgstr "Ctrl/Cmd+F pour activer la recherche"
+#: assets/gf-live-search.js:369
+msgid "Choose what Ctrl/Cmd+F does"
+msgstr "Choisir l'action de Ctrl/Cmd+F"
 
-#: assets/gf-live-search.js:180
+#: assets/gf-live-search.js:381
+msgid "Ctrl/Cmd+F"
+msgstr "Ctrl/Cmd+F"
+
+#: assets/gf-live-search.js:387
+msgid "Use browser find"
+msgstr "Utiliser la recherche du navigateur"
+
+#: assets/gf-live-search.js:393
+msgid "Focus this search"
+msgstr "Activer cette recherche"
+
+#: assets/gf-live-search.js:548
 #, javascript-format
 msgid "%d form"
 msgid_plural "%d forms"
 msgstr[0] "%d formulaire"
 msgstr[1] "%d formulaires"
 
-#: gf-live-search.php
+#: gf-live-search.php:166
 msgid "More information about GF Live Search"
 msgstr "Plus d'informations sur GF Live Search"
 
-#: gf-live-search.php
+#: gf-live-search.php:168
 msgid "View details"
 msgstr "Voir les détails"
 
-#: gf-live-search.php
+#: gf-live-search.php:175
 msgid "🐛 Report a Bug"
 msgstr "🐛 Signaler un bug"
 
-#: gf-live-search.php
+#: gf-live-search.php:181
 msgid "🐛 Report a Bug (install Bug Reporter)"
 msgstr "🐛 Signaler un bug (installer Bug Reporter)"
