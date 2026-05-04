@@ -3,7 +3,7 @@
  * Plugin Name:       GF Live Search
  * Plugin URI:        https://github.com/guilamu/gf-live-search
  * Description:       Adds live filtering to the Gravity Forms forms list. As you type in the search box, forms are instantly filtered without a page reload.
- * Version:           1.0.3
+ * Version:           1.0.5
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Guilamu
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'GF_LIVE_SEARCH_VERSION', '1.0.3' );
+define( 'GF_LIVE_SEARCH_VERSION', '1.0.5' );
 define( 'GF_LIVE_SEARCH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'GF_LIVE_SEARCH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 

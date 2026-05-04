@@ -76,6 +76,253 @@
     }
 
     /**
+     * Compute the Levenshtein distance between two strings.
+     *
+     * @param {string} a
+     * @param {string} b
+     * @returns {number}
+     */
+    function levenshteinDistance( a, b ) {
+        var m = a.length;
+        var n = b.length;
+
+        if ( m === 0 ) {
+            return n;
+        }
+        if ( n === 0 ) {
+            return m;
+        }
+
+        var matrix = [];
+        var i, j;
+
+        for ( i = 0; i <= m; i++ ) {
+            matrix[ i ] = [ i ];
+        }
+        for ( j = 0; j <= n; j++ ) {
+            matrix[ 0 ][ j ] = j;
+        }
+
+        for ( i = 1; i <= m; i++ ) {
+            for ( j = 1; j <= n; j++ ) {
+                var cost = a.charAt( i - 1 ) === b.charAt( j - 1 ) ? 0 : 1;
+                matrix[ i ][ j ] = Math.min(
+                    matrix[ i - 1 ][ j ] + 1,       // deletion
+                    matrix[ i ][ j - 1 ] + 1,       // insertion
+                    matrix[ i - 1 ][ j - 1 ] + cost // substitution
+                );
+            }
+        }
+
+        return matrix[ m ][ n ];
+    }
+
+    /**
+     * Split text into whitespace-delimited words.
+     *
+     * @param {string} text
+     * @returns {Array<string>}
+     */
+    function getWords( text ) {
+        return text.split( /\s+/ ).filter( function ( w ) {
+            return w.length > 0;
+        } );
+    }
+
+    /**
+     * Maximum permissible edit distance for a fuzzy match on a word of the
+     * given length (≈ 40 %, never below 1).
+     *
+     * @param {number} wordLength
+     * @returns {number}
+     */
+    function getFuzzyThreshold( wordLength ) {
+        return Math.max( 1, Math.round( wordLength * 0.3 ) );
+    }
+
+    /**
+     * Score a single row against a set of query words (AND logic).
+     *
+     * @param {string}       rowText
+     * @param {Array<string>} queryWords
+     * @returns {{score: number, matchedWords: Array<string>}}
+     */
+    function scoreRow( rowText, queryWords ) {
+        var rowWords = getWords( rowText );
+        var totalScore = 0;
+        var matchedWords = [];
+        var allMatched = true;
+
+        for ( var q = 0; q < queryWords.length; q++ ) {
+            var queryWord = queryWords[ q ];
+            var bestScore = 0;
+            var bestMatchWord = '';
+            var matched = false;
+
+            // 1. Exact substring anywhere in the full row text.
+            if ( rowText.indexOf( queryWord ) !== -1 ) {
+                bestScore = 1000;
+                matched = true;
+
+                // Identify the word that contains the substring for highlighting.
+                for ( var r = 0; r < rowWords.length; r++ ) {
+                    if ( rowWords[ r ].indexOf( queryWord ) !== -1 ) {
+                        bestMatchWord = rowWords[ r ];
+                        break;
+                    }
+                }
+                if ( ! bestMatchWord ) {
+                    bestMatchWord = queryWord;
+                }
+            } else {
+                // 2–4. Word-level matching.
+                for ( var r = 0; r < rowWords.length; r++ ) {
+                    var rowWord = rowWords[ r ];
+                    var score = 0;
+                    var matchWord = '';
+
+                    if ( rowWord === queryWord ) {
+                        score = 500;
+                        matchWord = rowWord;
+                    } else if ( rowWord.indexOf( queryWord ) !== -1 || queryWord.indexOf( rowWord ) !== -1 ) {
+                        score = 100;
+                        matchWord = rowWord;
+                    } else {
+                        var threshold = getFuzzyThreshold( rowWord.length );
+                        var lengthDiff = Math.abs( queryWord.length - rowWord.length );
+
+                        if ( lengthDiff <= threshold ) {
+                            var dist = levenshteinDistance( queryWord, rowWord );
+                            if ( dist <= threshold ) {
+                                score = Math.max( 0, 300 - dist * 10 );
+                                matchWord = rowWord;
+                            }
+                        }
+                    }
+
+                    if ( score > bestScore ) {
+                        bestScore = score;
+                        bestMatchWord = matchWord;
+                    }
+                }
+
+                matched = bestScore > 0;
+            }
+
+            if ( matched ) {
+                totalScore += bestScore;
+                if ( bestMatchWord && matchedWords.indexOf( bestMatchWord ) === -1 ) {
+                    matchedWords.push( bestMatchWord );
+                }
+            } else {
+                allMatched = false;
+                break;
+            }
+        }
+
+        if ( ! allMatched ) {
+            return { score: 0, matchedWords: [] };
+        }
+
+        return { score: totalScore, matchedWords: matchedWords };
+    }
+
+    /**
+     * Restore a row to its original (un-highlighted) HTML.
+     *
+     * @param {HTMLTableRowElement} row
+     */
+    function restoreRow( row ) {
+        if ( row.dataset.gflsOriginalHtml ) {
+            row.innerHTML = row.dataset.gflsOriginalHtml;
+        }
+    }
+
+    /**
+     * Wrap matched whole words in <mark> elements inside a row.
+     *
+     * @param {HTMLTableRowElement} row
+     * @param {Array<string>}       wordsToHighlight  normalised words
+     */
+    function highlightRow( row, wordsToHighlight ) {
+        if ( ! wordsToHighlight || ! wordsToHighlight.length ) {
+            return;
+        }
+
+        restoreRow( row );
+
+        var walker = document.createTreeWalker( row, NodeFilter.SHOW_TEXT, null, false );
+        var textNodes = [];
+        var node;
+
+        while ( ( node = walker.nextNode() ) ) {
+            var parentTag = node.parentNode && node.parentNode.tagName;
+            if ( parentTag === 'MARK' || parentTag === 'SCRIPT' || parentTag === 'STYLE' ) {
+                continue;
+            }
+            textNodes.push( node );
+        }
+
+        textNodes.forEach( function ( textNode ) {
+            var text = textNode.textContent;
+            if ( ! text ) {
+                return;
+            }
+
+            var segments = text.split( /(\s+)/ );
+            var hasHighlight = false;
+            var fragment = document.createDocumentFragment();
+
+            segments.forEach( function ( segment ) {
+                if ( ! segment || /^\s+$/.test( segment ) ) {
+                    fragment.appendChild( document.createTextNode( segment || '' ) );
+                    return;
+                }
+
+                var normalizedSegment = normalize( segment );
+                var shouldHighlight = false;
+
+                for ( var i = 0; i < wordsToHighlight.length; i++ ) {
+                    var hw = normalize( wordsToHighlight[ i ] );
+                    var maxLen = Math.max( normalizedSegment.length, hw.length );
+                    var threshold = getFuzzyThreshold( maxLen );
+                    var lengthDiff = Math.abs( normalizedSegment.length - hw.length );
+                    var dist;
+
+                    if ( normalizedSegment === hw ||
+                         normalizedSegment.indexOf( hw ) !== -1 ||
+                         hw.indexOf( normalizedSegment ) !== -1 ) {
+                        shouldHighlight = true;
+                        break;
+                    }
+
+                    if ( lengthDiff <= threshold ) {
+                        dist = levenshteinDistance( normalizedSegment, hw );
+                        if ( dist <= threshold ) {
+                            shouldHighlight = true;
+                            break;
+                        }
+                    }
+                }
+
+                if ( shouldHighlight ) {
+                    hasHighlight = true;
+                    var mark = document.createElement( 'mark' );
+                    mark.className = 'gfls-highlight';
+                    mark.textContent = segment;
+                    fragment.appendChild( mark );
+                } else {
+                    fragment.appendChild( document.createTextNode( segment ) );
+                }
+            } );
+
+            if ( hasHighlight ) {
+                textNode.parentNode.replaceChild( fragment, textNode );
+            }
+        } );
+    }
+
+    /**
      * Convert array-like collections into real arrays.
      *
      * @param {*} list
@@ -153,6 +400,11 @@
      */
     function primeRow( row ) {
         row.dataset.gflsSearchText = getRowSearchText( row );
+
+        if ( ! row.dataset.gflsOriginalHtml ) {
+            row.dataset.gflsOriginalHtml = row.innerHTML;
+        }
+
         return row;
     }
 
@@ -524,43 +776,65 @@
 
         /**
          * Filter table rows based on the current input value.
-         * Searches across: form title, form ID, entry count.
+         * Uses fuzzy Levenshtein matching, AND logic for multi-word queries,
+         * highlights matched words, and re-orders rows so best hits appear first.
          */
         function filterForms() {
             var query = normalize( input.value.trim() );
-            var rows = currentRows.concat( remoteRows );
-
-            var visibleCount = 0;
+            var allRows = currentRows.concat( remoteRows );
 
             if ( ! query ) {
+                // Restore original order and visibility.
                 currentRows.forEach( function ( row ) {
+                    restoreRow( row );
                     row.hidden = false;
+                    tbody.insertBefore( row, noResults );
                 } );
 
                 remoteRows.forEach( function ( row ) {
+                    restoreRow( row );
                     row.hidden = true;
+                    tbody.insertBefore( row, noResults );
                 } );
 
                 noResults.hidden = true;
-                updateCountBadge( visibleCount, query );
+                updateCountBadge( 0, query );
                 syncInputState();
 
                 return;
             }
 
-            rows.forEach( function ( row ) {
-                var haystack = row.dataset.gflsSearchText || '';
+            var queryWords = getWords( query );
+            var scoredRows = [];
 
-                var matches = haystack.indexOf( query ) !== -1;
-                row.hidden = ! matches;
-                if ( matches ) { visibleCount++; }
+            allRows.forEach( function ( row ) {
+                var rowText = row.dataset.gflsSearchText || '';
+                var result = scoreRow( rowText, queryWords );
+
+                if ( result.score > 0 ) {
+                    scoredRows.push( {
+                        row: row,
+                        score: result.score,
+                        matchedWords: result.matchedWords,
+                    } );
+                } else {
+                    row.hidden = true;
+                    restoreRow( row );
+                }
             } );
 
-            // Toggle the no-results row
-            noResults.hidden = visibleCount !== 0;
+            scoredRows.sort( function ( a, b ) {
+                return b.score - a.score;
+            } );
 
-            // Update the visual counter badge (GF shows "X items" above the table)
-            updateCountBadge( visibleCount, query );
+            scoredRows.forEach( function ( item ) {
+                item.row.hidden = false;
+                tbody.insertBefore( item.row, noResults );
+                highlightRow( item.row, item.matchedWords );
+            } );
+
+            noResults.hidden = scoredRows.length > 0;
+            updateCountBadge( scoredRows.length, query );
             syncInputState();
         }
 

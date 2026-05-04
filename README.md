@@ -2,9 +2,6 @@
 
 Instant live filtering for the Gravity Forms forms list.
 
-<img width="610" height="273" alt="{1F5ECAF2-0E85-4C94-8701-FF81A74E198C}" src="https://github.com/user-attachments/assets/40b11304-b34a-4f5d-9927-4785498de237" />
-
-
 ## Live Search
 
 As you type in the search box on **Forms → Forms**, rows are instantly shown or hidden.
@@ -74,6 +71,16 @@ Yes. Place a compiled `.po`/`.mo` pair and the corresponding JSON file for scrip
 ```
 
 ## Changelog
+
+### 1.0.5 - 2026-05-04
+- Fix Gravity Forms native search-field layout bug (`max-width: 69.5rem`)
+- Tighten fuzzy Levenshtein threshold from 40 % to 30 % for more accurate typo tolerance
+
+### 1.0.4 - 2026-05-04
+- Add fuzzy search with Levenshtein edit-distance matching (e.g. `conatct` → **contact**)
+- Multi-word queries use AND logic — every word must match
+- Matched words are highlighted with a yellow `<mark>` overlay
+- Results are re-ordered so exact matches appear before fuzzy hits
 
 ### 1.0.3 - 2026-04-25
 - Add an inline shortcut badge with a popover to control what `Ctrl/Cmd+F` does

@@ -137,6 +137,23 @@
     font-weight: 600;
 }
 
+/* ── Match highlighting ─────────────────────────────────────────────────────── */
+
+.gfls-highlight {
+    background: #ffeb3b;
+    color: #000;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
 #form_list_search.gf-live-search-has-value .tablenav-pages .pagination-links {
     display: none;
+}
+
+/* ── Fix for Gravity Forms native search-field layout bug ──────────────────── */
+
+.gform-settings-panel__content #form_list_form {
+    display: flex;
+    flex-wrap: wrap;
+    max-width: 69.5rem;
 }
