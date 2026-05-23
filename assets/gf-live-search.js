@@ -236,6 +236,19 @@
         if ( row.dataset.gflsOriginalHtml ) {
             row.innerHTML = row.dataset.gflsOriginalHtml;
         }
+
+        delete row.dataset.gflsHighlightKey;
+    }
+
+    /**
+     * Build a stable key for the current row highlight state.
+     *
+     * @param {string}        query
+     * @param {Array<string>} wordsToHighlight
+     * @returns {string}
+     */
+    function getHighlightKey( query, wordsToHighlight ) {
+        return [ query, wordsToHighlight.map( normalize ).sort().join( '|' ) ].join( '::' );
     }
 
     /**
@@ -828,9 +841,15 @@
             } );
 
             scoredRows.forEach( function ( item ) {
+                var highlightKey = getHighlightKey( query, item.matchedWords );
+
                 item.row.hidden = false;
                 tbody.insertBefore( item.row, noResults );
-                highlightRow( item.row, item.matchedWords );
+
+                if ( item.row.dataset.gflsHighlightKey !== highlightKey ) {
+                    highlightRow( item.row, item.matchedWords );
+                    item.row.dataset.gflsHighlightKey = highlightKey;
+                }
             } );
 
             noResults.hidden = scoredRows.length > 0;

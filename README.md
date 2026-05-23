@@ -72,6 +72,10 @@ Yes. Place a compiled `.po`/`.mo` pair and the corresponding JSON file for scrip
 
 ## Changelog
 
+### 1.0.6 - 2026-05-23
+- Fix a race where clicking a filtered form title could no-op on the first click after background page preloading completed
+- Skip redundant row re-highlighting when the active query and matches have not changed, so highlighted title links stay stable
+
 ### 1.0.5 - 2026-05-04
 - Fix Gravity Forms native search-field layout bug (`max-width: 69.5rem`)
 - Tighten fuzzy Levenshtein threshold from 40 % to 30 % for more accurate typo tolerance
