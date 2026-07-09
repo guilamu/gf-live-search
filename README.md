@@ -72,6 +72,14 @@ Yes. Place a compiled `.po`/`.mo` pair and the corresponding JSON file for scrip
 
 ## Changelog
 
+### 1.0.8 - 2026-07-09
+- Fix the "Settings" hover submenu showing only its first two items after a search: re-ordering the results detached each row, and Gravity Forms' global observer destroyed the SimpleBar scroll instance inside the submenu, freezing its viewport height. Destroyed instances are now re-created on the next frame, restoring the full menu
+
+### 1.0.7 - 2026-07-09
+- Fix the "Settings" hover submenu going dead or truncated after a search: highlighting no longer rewrites row HTML (which destroyed Gravity Forms' hover bindings and SimpleBar instances) — `<mark>` tags are now added and removed without touching the rest of the row
+- Bind the "Settings" hover submenu on rows preloaded from other paginated pages, which Gravity Forms' own scripts never initialized
+- Never insert highlight marks inside the row-actions area
+
 ### 1.0.6 - 2026-05-23
 - Fix a race where clicking a filtered form title could no-op on the first click after background page preloading completed
 - Skip redundant row re-highlighting when the active query and matches have not changed, so highlighted title links stay stable

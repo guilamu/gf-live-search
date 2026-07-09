@@ -228,14 +228,26 @@
     }
 
     /**
-     * Restore a row to its original (un-highlighted) HTML.
+     * Remove highlight marks from a row without touching the rest of its DOM.
+     *
+     * Never replace row.innerHTML here: Gravity Forms binds jQuery hover
+     * handlers on each row's "Settings" span and initialises SimpleBar inside
+     * the submenu. Recreating those nodes from an HTML string leaves the
+     * submenu dead (no listeners, orphaned SimpleBar markup).
      *
      * @param {HTMLTableRowElement} row
      */
     function restoreRow( row ) {
-        if ( row.dataset.gflsOriginalHtml ) {
-            row.innerHTML = row.dataset.gflsOriginalHtml;
-        }
+        toArray( row.querySelectorAll( 'mark.gfls-highlight' ) ).forEach( function ( mark ) {
+            var parent = mark.parentNode;
+
+            if ( ! parent ) {
+                return;
+            }
+
+            parent.replaceChild( document.createTextNode( mark.textContent ), mark );
+            parent.normalize();
+        } );
 
         delete row.dataset.gflsHighlightKey;
     }
@@ -269,8 +281,15 @@
         var node;
 
         while ( ( node = walker.nextNode() ) ) {
-            var parentTag = node.parentNode && node.parentNode.tagName;
+            var parent = node.parentNode;
+            var parentTag = parent && parent.tagName;
             if ( parentTag === 'MARK' || parentTag === 'SCRIPT' || parentTag === 'STYLE' ) {
+                continue;
+            }
+            // Row actions (and the GF settings submenu inside them) are
+            // excluded from the searchable text, so never highlight there —
+            // inserting nodes into GF-managed widgets can break them.
+            if ( parent && parent.closest && parent.closest( '.row-actions, .screen-reader-text, .toggle-row' ) ) {
                 continue;
             }
             textNodes.push( node );
@@ -414,11 +433,78 @@
     function primeRow( row ) {
         row.dataset.gflsSearchText = getRowSearchText( row );
 
-        if ( ! row.dataset.gflsOriginalHtml ) {
-            row.dataset.gflsOriginalHtml = row.innerHTML;
+        return row;
+    }
+
+    /**
+     * Recreate GF's "Settings" submenu hover behaviour on a row.
+     *
+     * Rows fetched from other paginated pages were parsed with DOMParser, so
+     * Gravity Forms' own jQuery hover bindings never ran on them. GF's
+     * handlers simply toggle the submenu's display, so mirror that here.
+     *
+     * @param {HTMLTableRowElement} row
+     */
+    function bindSubmenuHover( row ) {
+        toArray( row.querySelectorAll( '.gf_form_action_has_submenu' ) ).forEach( function ( span ) {
+            var submenu = span.querySelector( '.gform-form-toolbar__submenu' );
+
+            if ( ! submenu ) {
+                return;
+            }
+
+            span.addEventListener( 'mouseenter', function () {
+                submenu.style.display = 'block';
+            } );
+
+            span.addEventListener( 'mouseleave', function () {
+                submenu.style.display = 'none';
+            } );
+        } );
+    }
+
+    /**
+     * Re-create the SimpleBar scroll instances inside the "Settings" submenus.
+     *
+     * Gravity Forms initialises SimpleBar on each submenu's `[data-simplebar]`
+     * element and keeps a global MutationObserver that DESTROYS an instance the
+     * moment its element is detached from the DOM. Re-ordering rows with
+     * `insertBefore` (which detaches then re-attaches the row) therefore leaves
+     * the submenu with a dead SimpleBar: its scroll viewport stays frozen at the
+     * last measured height — only the first couple of items are visible. Rows
+     * imported from other paginated pages never had SimpleBar initialised at all.
+     *
+     * Re-instantiating SimpleBar on an already-mounted element is idempotent (it
+     * reuses the existing markup), so we simply recreate any instance the
+     * observer has dropped. Must run AFTER the observer's microtask, i.e. from a
+     * `requestAnimationFrame`/timeout callback — never synchronously after a move.
+     *
+     * @param {HTMLElement} container  the tbody holding the rows
+     */
+    function reinitSubmenuScrollbars( container ) {
+        var SimpleBar = window.SimpleBar;
+
+        if ( ! SimpleBar || ! SimpleBar.instances || typeof SimpleBar.instances.get !== 'function' ) {
+            return;
         }
 
-        return row;
+        getFormRows( container ).forEach( function ( row ) {
+            if ( row.hidden ) {
+                return;
+            }
+
+            toArray( row.querySelectorAll( '.gform-form-toolbar__submenu [data-simplebar]' ) ).forEach( function ( element ) {
+                if ( SimpleBar.instances.get( element ) ) {
+                    return;
+                }
+
+                try {
+                    new SimpleBar( element );
+                } catch ( error ) {
+                    // A failed re-init must never break live filtering.
+                }
+            } );
+        } );
     }
 
     /**
@@ -561,6 +647,29 @@
         var shortcutPopover = null;
         var browserOption = null;
         var searchOption = null;
+        var submenuReinitScheduled = false;
+
+        // Re-order the rows detaches their GF "Settings" submenus, which makes
+        // Gravity Forms destroy the SimpleBar scroll instances inside them. Repair
+        // them on the next frame, once GF's own MutationObserver microtask has run.
+        function scheduleSubmenuReinit() {
+            if ( submenuReinitScheduled ) {
+                return;
+            }
+
+            submenuReinitScheduled = true;
+
+            var run = function () {
+                submenuReinitScheduled = false;
+                reinitSubmenuScrollbars( tbody );
+            };
+
+            if ( window.requestAnimationFrame ) {
+                window.requestAnimationFrame( run );
+            } else {
+                setTimeout( run, 0 );
+            }
+        }
 
         // ── No-results placeholder ────────────────────────────────────────────
 
@@ -761,6 +870,7 @@
                             var importedRow = document.importNode( row, true );
 
                             importedRow.hidden = true;
+                            bindSubmenuHover( importedRow );
 
                             return primeRow( importedRow );
                         } );
@@ -813,6 +923,7 @@
                 noResults.hidden = true;
                 updateCountBadge( 0, query );
                 syncInputState();
+                scheduleSubmenuReinit();
 
                 return;
             }
@@ -855,6 +966,7 @@
             noResults.hidden = scoredRows.length > 0;
             updateCountBadge( scoredRows.length, query );
             syncInputState();
+            scheduleSubmenuReinit();
         }
 
         /**
