@@ -321,9 +321,16 @@
                     var lengthDiff = Math.abs( normalizedSegment.length - hw.length );
                     var dist;
 
+                    // A segment counts as a partial match when it is a
+                    // substring of a matched word (or vice versa). Require the
+                    // segment to be at least 2 characters so a single stray
+                    // character isn't highlighted just because it appears
+                    // inside a longer term — e.g. the digit "0" inside "2026",
+                    // which would otherwise light up every "0" on the page.
                     if ( normalizedSegment === hw ||
-                         normalizedSegment.indexOf( hw ) !== -1 ||
-                         hw.indexOf( normalizedSegment ) !== -1 ) {
+                         ( normalizedSegment.length >= 2 &&
+                           ( normalizedSegment.indexOf( hw ) !== -1 ||
+                             hw.indexOf( normalizedSegment ) !== -1 ) ) ) {
                         shouldHighlight = true;
                         break;
                     }
@@ -695,6 +702,31 @@
         noResults.hidden = true;
         tbody.appendChild( noResults );
 
+        // Visually hidden live region so screen-reader users hear how many forms
+        // remain as they type. The table rows show/hide silently otherwise.
+        var liveRegion = document.createElement( 'span' );
+        liveRegion.className = 'screen-reader-text';
+        liveRegion.setAttribute( 'role', 'status' );
+        liveRegion.setAttribute( 'aria-live', 'polite' );
+        form.appendChild( liveRegion );
+
+        /**
+         * Announce the current result count to assistive technology.
+         *
+         * @param {number} count
+         * @param {string} query  current normalised query
+         */
+        function announceResults( count, query ) {
+            if ( ! query ) {
+                liveRegion.textContent = '';
+                return;
+            }
+
+            liveRegion.textContent = count > 0
+                ? sprintf( _n( '%d form', '%d forms', count, 'gf-live-search' ), count )
+                : __( 'No forms match your search.', 'gf-live-search' );
+        }
+
         function setShortcutPopoverState( isOpen ) {
             if ( ! shortcutPopover || ! shortcutBadge ) {
                 return;
@@ -922,6 +954,7 @@
 
                 noResults.hidden = true;
                 updateCountBadge( 0, query );
+                announceResults( 0, query );
                 syncInputState();
                 scheduleSubmenuReinit();
 
@@ -965,6 +998,7 @@
 
             noResults.hidden = scoredRows.length > 0;
             updateCountBadge( scoredRows.length, query );
+            announceResults( scoredRows.length, query );
             syncInputState();
             scheduleSubmenuReinit();
         }
@@ -1025,11 +1059,18 @@
         input.addEventListener( 'change', filterForms );
 
         syncInputState();
-        preloadOtherPages();
+
+        // Preloading every other paginated page costs one full admin-page fetch
+        // per page — wasted server load if the user never searches. Defer it to
+        // the first time the user engages the search box. preloadOtherPages() is
+        // guarded by preloadPromise, so triggering it more than once is harmless.
+        input.addEventListener( 'focus', preloadOtherPages, { once: true } );
 
         // Instantly filter when the page loads with a pre-filled value
-        // (e.g. the user refreshed with ?s=foo in the URL)
+        // (e.g. the user refreshed with ?s=foo in the URL). The user is already
+        // searching in that case, so preload the remaining pages right away.
         if ( input.value.trim() !== '' ) {
+            preloadOtherPages();
             filterForms();
         }
 

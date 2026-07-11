@@ -501,7 +501,7 @@ class GF_Live_Search_GitHub_Updater {
 
         return new WP_Error(
             'rename_failed',
-            __( 'Unable to rename the update folder. Please retry or update manually.', self::TEXT_DOMAIN )
+            __( 'Unable to rename the update folder. Please retry or update manually.', 'gf-live-search' )
         );
     }
 }

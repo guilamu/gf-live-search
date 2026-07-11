@@ -1,9 +1,9 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: GF Live Search 1.0.3\n"
+"Project-Id-Version: GF Live Search 1.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/guilamu/gf-live-search/issues\n"
-"POT-Creation-Date: 2026-04-25 00:00+0000\n"
-"PO-Revision-Date: 2026-04-25 17:34+0200\n"
+"POT-Creation-Date: 2026-07-11 00:00+0000\n"
+"PO-Revision-Date: 2026-07-11 08:46+0200\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Language: fr_FR\n"
@@ -12,7 +12,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Domain: gf-live-search\n"
-"X-Generator: Poedit 3.9\n"
+"X-Generator: Poedit 3.8\n"
 
 #: assets/gf-live-search.js:316
 msgid "No forms match your search."
@@ -56,3 +56,7 @@ msgstr "🐛 Signaler un bug"
 #: gf-live-search.php:181
 msgid "🐛 Report a Bug (install Bug Reporter)"
 msgstr "🐛 Signaler un bug (installer Bug Reporter)"
+
+#: includes/class-github-updater.php:504
+msgid "Unable to rename the update folder. Please retry or update manually."
+msgstr "Impossible de renommer le dossier de mise à jour. Veuillez réessayer ou mettre à jour manuellement."

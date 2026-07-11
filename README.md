@@ -72,6 +72,11 @@ Yes. Place a compiled `.po`/`.mo` pair and the corresponding JSON file for scrip
 
 ## Changelog
 
+### 1.1.0 - 2026-07-11
+- Highlighting no longer lights up single stray characters that merely appear inside a matched term — e.g. searching `2026` no longer highlights every standalone `0` (such as `Entries`/`Views` counts of 0 or "Phase 0" in a title). Partial highlights now require at least two characters
+- Defer background preloading of the other paginated Forms-list pages until the search box is first focused, instead of on every page load — no wasted server requests when you never search
+- Announce the live result count to screen readers via an `aria-live` region as you type
+
 ### 1.0.8 - 2026-07-09
 - Fix the "Settings" hover submenu showing only its first two items after a search: re-ordering the results detached each row, and Gravity Forms' global observer destroyed the SimpleBar scroll instance inside the submenu, freezing its viewport height. Destroyed instances are now re-created on the next frame, restoring the full menu
 

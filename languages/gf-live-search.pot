@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: GF Live Search 1.0.3\n"
+"Project-Id-Version: GF Live Search 1.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/guilamu/gf-live-search/issues\n"
-"POT-Creation-Date: 2026-04-25 00:00+0000\n"
+"POT-Creation-Date: 2026-07-11 00:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -53,4 +53,8 @@ msgstr ""
 
 #: gf-live-search.php:181
 msgid "🐛 Report a Bug (install Bug Reporter)"
+msgstr ""
+
+#: includes/class-github-updater.php:504
+msgid "Unable to rename the update folder. Please retry or update manually."
 msgstr ""
